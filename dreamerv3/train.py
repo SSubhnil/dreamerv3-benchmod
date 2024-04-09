@@ -3,6 +3,10 @@ import pathlib
 import sys
 import warnings
 from functools import partial as bind
+import wandb
+
+api_key = "576d985d69bfd39f567224809a6a3dd329326993"
+wandb.login(key=api_key)
 
 warnings.filterwarnings('ignore', '.*box bound precision lowered.*')
 warnings.filterwarnings('ignore', '.*using stateful random seeds*')
@@ -112,7 +116,7 @@ def make_logger(parsed, logdir, step, config):
       embodied.logger.JSONLOutput(logdir, 'metrics.jsonl'),
       embodied.logger.JSONLOutput(logdir, 'scores.jsonl', 'episode/score'),
       embodied.logger.TensorBoardOutput(logdir),
-      # embodied.logger.WandBOutput(logdir.name, config),
+      embodied.logger.WandBOutput(logdir.name, config)
       # embodied.logger.MLFlowOutput(logdir.name),
   ], multiplier)
   return logger

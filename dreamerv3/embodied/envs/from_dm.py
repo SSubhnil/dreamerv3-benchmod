@@ -1,6 +1,8 @@
 import functools
 import os
 
+import mujoco
+
 from dreamerv3 import embodied
 import numpy as np
 
@@ -52,6 +54,9 @@ class FromDM(embodied.Env):
       time_step = self._env.reset()
     else:
       action = action if self._act_dict else action[self._act_key]
+
+      self.apply_confounder()
+
       time_step = self._env.step(action)
     self._done = time_step.last()
     return self._obs(time_step)
@@ -83,3 +88,13 @@ class FromDM(embodied.Env):
           space.dtype, space.shape, space.minimum, space.maximum)
     else:
       return embodied.Space(space.dtype, space.shape, None, None)
+
+
+    """Custom function for applying unbalancing force"""
+  def apply_confounder(self, force_magnitude):
+    force = np.array([force_magnitude, 0, 0, 0, 0, 0])
+    body_index = self._env.physics.model.body_name2id('torso')
+
+    # Apply force directly for a single step
+    mujoco.mj_applyFT(self._env.physics.model, self._env.physics.data,
+                      force, np.array([0, 0, 0, 0, 0, 0]), body_index, np.array([0, 0, 0, 0, 0, 0]))
