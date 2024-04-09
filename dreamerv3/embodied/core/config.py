@@ -1,7 +1,7 @@
 import io
 import json
 import re
-
+from ruamel.yaml import YAML
 from . import path
 
 
@@ -28,12 +28,16 @@ class Config(dict):
   def save(self, filename):
     filename = path.Path(filename)
     if filename.suffix == '.json':
-      filename.write(json.dumps(dict(self)))
+      filename.write(json.dumps(dict(self), indent=4))
     elif filename.suffix in ('.yml', '.yaml'):
-      import ruamel.yaml as yaml
-      with io.StringIO() as stream:
-        yaml.safe_dump(dict(self), stream)
-        filename.write(stream.getvalue())
+      yaml = YAML()
+      yaml.indent(mapping=2, sequence=4, offset=2)
+      yaml.default_flow_style = False
+      with open(filename, 'w') as file:
+        yaml.dump(dict(self), file)
+      # with io.StringIO() as stream:
+      #   yaml.safe_dump(dict(self), stream)
+      #   filename.write(stream.getvalue())
     else:
       raise NotImplementedError(filename.suffix)
 
