@@ -134,5 +134,5 @@ class FromDM(embodied.Env):
 
         # Updates timing
         self.time_since_last_force += 1
-        if self.timing == 'unifrom' and self.time_since_last_force >= self.interval:
+        if self.timing == 'uniform' and self.time_since_last_force >= self.interval:
           self.time_since_last_force = 0  # resets timer for next cycle

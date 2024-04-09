@@ -237,6 +237,7 @@ class WandBOutput:
         # sync_tensorboard=True,,
         entity='word-bots',
         config=dict(config),
+        mode='offline'
     )
     self._wandb = wandb
 
