@@ -9,8 +9,8 @@ import numpy as np
 
 class FromDM(embodied.Env):
 
-    def __init__(self, env, obs_key='observation', act_key='action', confounder_active=False, confounder_params=None,
-                 force_mag=50, interval=50):
+    def __init__(self, env, obs_key='observation', act_key='action', confounder_active=True, confounder_params=None,
+                 force_mag=70, interval=100):
         self._env = env
         self.confounder_active = confounder_active
         obs_spec = self._env.observation_spec()
@@ -22,8 +22,8 @@ class FromDM(embodied.Env):
         self._obs_empty = []
         self._done = True
         default_params = {
-            'force_type': 'step',
-            'timing': 'uniform',
+            'force_type': 'swelling',
+            'timing': 'random',
             'force_magnitude': force_mag,
             'interval': interval}
         self.confounder_params = confounder_params or default_params
@@ -70,8 +70,7 @@ class FromDM(embodied.Env):
         else:
             action = action if self._act_dict else action[self._act_key]
 
-            self.apply_confounder()
-
+            self.apply_force()
             time_step = self._env.step(action)
         self._done = time_step.last()
         return self._obs(time_step)
@@ -112,7 +111,7 @@ class FromDM(embodied.Env):
 
         if self.timing == 'uniform' and self.time_since_last_force % self.interval != 0:
             return
-        if self.timing == 'random' and np.random.unifrom() > 0.1:  # 10% chance to apply force
+        if self.timing == 'random' and np.random.uniform() > 0.1:  # 10% chance to apply force
             return
 
         # Construct the force vector
@@ -135,4 +134,4 @@ class FromDM(embodied.Env):
         # Updates timing
         self.time_since_last_force += 1
         if self.timing == 'uniform' and self.time_since_last_force >= self.interval:
-          self.time_since_last_force = 0  # resets timer for next cycle
+            self.time_since_last_force = 0  # resets timer for next cycle
