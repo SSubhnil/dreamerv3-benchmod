@@ -70,6 +70,7 @@ class LocoNav(embodied.Env):
         return self._env.act_space
 
     def step(self, action):
+        print("third trigger=====")
         with warnings.catch_warnings():
             warnings.filterwarnings('ignore', '.*is a deprecated alias for.*')
             action = action.copy()

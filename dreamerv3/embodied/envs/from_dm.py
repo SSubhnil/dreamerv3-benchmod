@@ -10,7 +10,7 @@ import numpy as np
 class FromDM(embodied.Env):
 
     def __init__(self, env, obs_key='observation', act_key='action', confounder_active=True, confounder_params=None,
-                 force_mag=70, interval=100):
+                 force_mag=240, interval=100):
         self._env = env
         self.confounder_active = confounder_active
         obs_spec = self._env.observation_spec()
@@ -24,15 +24,28 @@ class FromDM(embodied.Env):
         default_params = {
             'force_type': 'swelling',
             'timing': 'random',
+            'body_part': 'torso',
             'force_magnitude': force_mag,
-            'interval': interval}
+            'interval': interval,
+            'force_range': (80, 150),
+            'interval_mean': 90,  # Mean for sampling interval
+            'interval_std': 20, # Standard deviation for sampling interval
+            'duration_min': 10, # Minimum duration for swelling force
+            'duration_max': 30  # Maximum duration for the swelling force
+            }
         self.confounder_params = confounder_params or default_params
 
         # Initialize attributes based on confounder_params
         self.force_type = self.confounder_params['force_type']
         self.timing = self.confounder_params['timing']
+        self.body_part = self.confounder_params['body_part']
         self.force_magnitude = self.confounder_params['force_magnitude']
         self.interval = self.confounder_params['interval']
+        self.force_range = self.confounder_params['force_range']
+        self.interval_mean = self.confounder_params['interval_mean']
+        self.interval_std = self.confounder_params['interval_std']
+        self.duration_min = self.confounder_params['duration_min']
+        self.duration_max = self.confounder_params['duration_max']
         self.time_since_last_force = 0
 
     @functools.cached_property
@@ -106,32 +119,44 @@ class FromDM(embodied.Env):
     """Custom function for applying unbalancing force"""
 
     def apply_force(self):
-        if not self.confounder_active:
+        if self.timing == 'random':
+            self.interval = max(30, int(np.random.normal(self.interval_mean, self.interval_std))):  # 10% chance to apply force
+            if np.random.uniform() < 0.8:
+                return
+
+        # Update the timing
+        self.time_since_last_force += 1
+        if self.time_since_last_force < self.interval:
             return
 
-        if self.timing == 'uniform' and self.time_since_last_force % self.interval != 0:
-            return
-        if self.timing == 'random' and np.random.uniform() > 0.1:  # 10% chance to apply force
-            return
+        # Reset timing for next force application
+        self.time_since_last_force = 0
 
+        # Sample the force magnitude fom a normal distribution within the range
+        force_magnitude = np.clip(np.random.normal((self.force_range[0] + self.force_range[1]) / 2,
+                                                   (self.force_range[1] - self.force_range[0]) / 6),
+                                  self.force_range[0], self.force_range[1])
+
+        # Calculate the duration for the force application if 'swelling'
+        duration = np.random.randint(self.duration_min, self.duration_max + 1)
+
+        # FLipping the direction for additional challenge
+        direction = np.random.choice([-1, 1])
+
+        # Apply swelling or other dynamics based on force type
         # Construct the force vector
         if self.force_type == 'step':
-            force = np.array([self.force_magnitude, 0, 0, 0, 0, 0])
+            force = np.array([direction * force_magnitude, 0, 0, 0, 0, 0])
         elif self.force_type == 'swelling':
             # Calculate the time step where the force magnitude is at its peak
-            peak_time = self.interval / 2
+            peak_time = duration / 2
             # Calculate the standard deviation to control thh width of the bell curve
-            sigma = self.interval / 6  # Adjust as needed for the desired width
-
+            sigma = duration / 6  # Adjust as needed for the desired width
             # Calculate the force magnitude at the current time step using a Gaussian function
             time_step_normalized = (self.time_since_last_force - peak_time) / sigma
-            magnitude = self.force_magnitude * np.exp(-0.5 * (time_step_normalized ** 2))
-            force = np.array([magnitude, 0, 0, 0, 0, 0])
+            magnitude = force_magnitude * np.exp(-0.5 * (time_step_normalized ** 2))
+            force = np.array([direction * magnitude, 0, 0, 0, 0, 0])
 
+        body_id = self._env.physics.model.name2id(self.body_part, 'body')
         # Apply the force
-        self._env.physics.named.data.xfrc_applied['torso'][:] = force
-
-        # Updates timing
-        self.time_since_last_force += 1
-        if self.timing == 'uniform' and self.time_since_last_force >= self.interval:
-            self.time_since_last_force = 0  # resets timer for next cycle
+        self._env.physics.data.xfrc_applied[body_id] = force

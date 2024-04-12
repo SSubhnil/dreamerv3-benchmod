@@ -35,7 +35,7 @@ class DMC(embodied.Env):
         from . import from_dm
         self._env = from_dm.FromDM(self._dmenv)
         self._env = embodied.wrappers.ExpandScalars(self._env)
-        self._env = embodied.wrappers.ActionRepeat(self._env, repeat)
+        self._env = embodied.wrappers.ActionRepeat(self._env, repeat)  # Repeats an action a certain mumber of times
         self._render = render
         self._size = size
         self._camera = camera
