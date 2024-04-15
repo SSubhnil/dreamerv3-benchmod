@@ -5,12 +5,12 @@ import mujoco
 
 from dreamerv3 import embodied
 import numpy as np
-
+np.random.seed(42)
 
 class FromDM(embodied.Env):
 
     def __init__(self, env, obs_key='observation', act_key='action', confounder_active=True, confounder_params=None,
-                 force_mag=240, interval=100):
+                 force_mag=150, interval=100):
         self._env = env
         self.confounder_active = confounder_active
         obs_spec = self._env.observation_spec()
@@ -22,16 +22,17 @@ class FromDM(embodied.Env):
         self._obs_empty = []
         self._done = True
         default_params = {
-            'force_type': 'swelling',
+            'force_type': 'step',
             'timing': 'random',
             'body_part': 'torso',
             'force_magnitude': force_mag,
             'interval': interval,
-            'force_range': (80, 150),
-            'interval_mean': 90,  # Mean for sampling interval
-            'interval_std': 20, # Standard deviation for sampling interval
-            'duration_min': 10, # Minimum duration for swelling force
-            'duration_max': 30  # Maximum duration for the swelling force
+            'random_chance': 0.8,  # Chance to apply random force
+            'force_range': (90, 170),
+            'interval_mean': 180,  # Mean for sampling interval
+            'interval_std': 10,  # Standard deviation for sampling interval
+            'duration_min': 5,  # Minimum duration for swelling force
+            'duration_max': 20  # Maximum duration for the swelling force
             }
         self.confounder_params = confounder_params or default_params
 
@@ -41,6 +42,7 @@ class FromDM(embodied.Env):
         self.body_part = self.confounder_params['body_part']
         self.force_magnitude = self.confounder_params['force_magnitude']
         self.interval = self.confounder_params['interval']
+        self.random_chance = self.confounder_params['random_chance']
         self.force_range = self.confounder_params['force_range']
         self.interval_mean = self.confounder_params['interval_mean']
         self.interval_std = self.confounder_params['interval_std']
@@ -120,8 +122,9 @@ class FromDM(embodied.Env):
 
     def apply_force(self):
         if self.timing == 'random':
-            self.interval = max(30, int(np.random.normal(self.interval_mean, self.interval_std))):  # 10% chance to apply force
-            if np.random.uniform() < 0.8:
+            self.interval = max(30, int(np.random.normal(self.interval_mean,
+                                                         self.interval_std)))
+            if np.random.uniform() > self.random_chance:
                 return
 
         # Update the timing
