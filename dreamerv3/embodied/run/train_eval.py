@@ -1,6 +1,6 @@
 import re
 
-import embodied
+from dreamerv3 import embodied
 import numpy as np
 
 
