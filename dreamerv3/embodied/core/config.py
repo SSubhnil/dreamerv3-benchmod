@@ -4,7 +4,6 @@ import re
 from ruamel.yaml import YAML
 from . import path
 
-
 class Config(dict):
     SEP = '.'
     IS_PATTERN = re.compile(r'.*[^A-Za-z0-9_.-].*')

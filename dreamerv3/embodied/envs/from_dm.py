@@ -29,7 +29,7 @@ class FromDM(embodied.Env):
             'interval': interval,
             'random_chance': 0.8,  # Chance to apply random force
             'force_range': (90, 170),
-            'interval_mean': 180,  # Mean for sampling interval
+            'interval_mean': 90,  # Mean for sampling interval 90, 180
             'interval_std': 10,  # Standard deviation for sampling interval
             'duration_min': 5,  # Minimum duration for swelling force
             'duration_max': 20  # Maximum duration for the swelling force
@@ -85,7 +85,7 @@ class FromDM(embodied.Env):
         else:
             action = action if self._act_dict else action[self._act_key]
 
-            self.apply_force()
+            # self.apply_force()
             time_step = self._env.step(action)
         self._done = time_step.last()
         return self._obs(time_step)

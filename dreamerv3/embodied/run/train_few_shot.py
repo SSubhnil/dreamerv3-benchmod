@@ -1,15 +1,13 @@
-import io
 import re
-from datetime import datetime
 
 from dreamerv3 import embodied
 import numpy as np
 
 
-def train_save(agent, env, replay, logger, args):
+def train_few_shot(agent, env, replay, logger, args):
     logdir = embodied.Path(args.logdir)
     logdir.mkdirs()
-    print('Logdir:', logdir)
+    print('Logdir', logdir)
     should_expl = embodied.when.Until(args.expl_until)
     should_train = embodied.when.Ratio(args.train_ratio / args.batch_steps)
     should_log = embodied.when.Clock(args.log_every)
@@ -56,27 +54,8 @@ def train_save(agent, env, replay, logger, args):
                 stats[f'max_{key}'] = ep[key].max(0).mean()
         metrics.add(stats, prefix='stats')
 
-    epsdir = embodied.Path(args.logdir) / 'saved_episodes'
-    epsdir.mkdirs()
-    print('Saving episodes:', epsdir)
-
-    def save(ep):
-        time = datetime.now().strftime("%Y%m%dT%H%M%S")
-        uuid = str(embodied.uuid())
-        score = str(np.round(ep['reward'].sum(), 1)).replace('-', 'm')
-        length = len(ep['reward'])
-        filename = epsdir / f'{time}-{uuid}-len{length}-rew{score}.npz'
-        with io.BytesIO() as stream:
-            np.savez_compressed(stream, **ep)
-            stream.seek(0)
-            filename.write(stream.read(), mode='wb')
-        print('Saved episode:', filename)
-
-    saver = embodied.Worker(save, 'thread')
-
     driver = embodied.Driver(env)
     driver.on_episode(lambda ep, worker: per_episode(ep))
-    driver.on_episode(lambda ep, worker: saver(ep))
     driver.on_step(lambda tran, _: step.increment())
     driver.on_step(replay.add)
 
@@ -122,7 +101,7 @@ def train_save(agent, env, replay, logger, args):
     if args.from_checkpoint:
         checkpoint.load(args.from_checkpoint)
     checkpoint.load_or_save()
-    should_save(step)  # Register that we jused saved.
+    should_save(step)  # Register that we just saved.
 
     print('Start training loop.')
     policy = lambda *args: agent.policy(
