@@ -177,14 +177,14 @@ dmc_vision:
 
 dmc_proprio:
 # Using a script: train by default. See embodied-> run-> train.py
-  task: dmc_walker_run
+  task: dmc_walker_walk
   # Testing the difference between train and train_eval
   run:
-    script: train_few_shot
-    steps: 1e4 # ~ 1e6 + 1e4
+    script: train
+    steps: 1.025e6
     # eval_every: 1e2  #Evaluation every 10k steps
     train_ratio: 512
-    from_checkpoint: '~/logdir/Walker_walk_vanilla_medium/checkpoint.ckpt'  # Turn off when not evaluating
+    from_checkpoint: '~/logdir/Baselines/Walker_walk_step_uni-direction_-x/checkpoint.ckpt'  # Turn off when not evaluating
   rssm.deter: 512
   .*\.cnn_depth: 32
   .*\.layers: 2

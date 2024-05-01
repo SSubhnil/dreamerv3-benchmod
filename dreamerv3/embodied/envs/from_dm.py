@@ -85,7 +85,7 @@ class FromDM(embodied.Env):
         else:
             action = action if self._act_dict else action[self._act_key]
 
-            # self.apply_force()
+            self.apply_force()
             time_step = self._env.step(action)
         self._done = time_step.last()
         return self._obs(time_step)
@@ -144,7 +144,7 @@ class FromDM(embodied.Env):
         duration = np.random.randint(self.duration_min, self.duration_max + 1)
 
         # FLipping the direction for additional challenge
-        direction = np.random.choice([-1, 1])
+        direction = 1 #np.random.choice([-1, 1])
 
         # Apply swelling or other dynamics based on force type
         # Construct the force vector
