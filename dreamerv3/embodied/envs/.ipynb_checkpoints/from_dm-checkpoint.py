@@ -85,7 +85,7 @@ class FromDM(embodied.Env):
         else:
             action = action if self._act_dict else action[self._act_key]
 
-            self.apply_force()
+            # self.apply_force()
             time_step = self._env.step(action)
         self._done = time_step.last()
         return self._obs(time_step)

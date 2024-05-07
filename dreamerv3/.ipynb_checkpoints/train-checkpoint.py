@@ -1,13 +1,9 @@
-import os
-os.environ["PYOPENGL_PLATFORM"] = "osmesa"
-os.environ["MUJOCO_GL"] = "osmesa"
 import importlib
 import pathlib
 import sys
 import warnings
 from functools import partial as bind
-# import wandb
-
+import wandb
 
 # api_key = "576d985d69bfd39f567224809a6a3dd329326993"
 # wandb.login(key=api_key)
