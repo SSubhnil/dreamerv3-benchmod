@@ -30,7 +30,9 @@ class DMC(embodied.Env):
                 env = getattr(basic_rodent_2020, task)()
             else:
                 from dm_control import suite
-                env = suite.load(domain, task)
+                # Replace the original loading with this custom loader
+                env = makes_confounder_observable(suite, domain, task)
+                # env = suite.load(domain, task)
         self._dmenv = env
         from . import from_dm
         self._env = from_dm.FromDM(self._dmenv)
@@ -62,3 +64,20 @@ class DMC(embodied.Env):
 
     def render(self):
         return self._dmenv.physics.render(*self._size, camera_id=self._camera)
+
+
+def makes_confounder_observable(suite, domain, task):
+    env = suite.load(domain, task)
+
+    class ObservedConfounderEnv(env.__class__):
+        def observation(self,physics):
+            # Get the default observations
+            obs = super(ObservedConfounderEnv, self).observation(physics)
+            # Append external forces on the torso
+            body_id = physics.model.name2id('torso', 'body')
+            torso_force = physics.data.xfrc_applied[body_id][:3]  # Just the force components
+            obs['torso_force'] = torso_force
+            return obs
+
+    env.__class__ = ObservedConfounderEnv
+    return env
