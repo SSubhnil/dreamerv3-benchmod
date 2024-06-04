@@ -22,6 +22,7 @@ class FromDM(embodied.Env):
         self._obs_empty = []
         self._done = True
         default_params = {
+            'cripple_part': None, # 'right_hip/_knee/_ankle' or 'left_hip/_knee/_ankle'
             'force_type': 'step',
             'timing': 'random',
             'body_part': 'torso',
@@ -37,6 +38,7 @@ class FromDM(embodied.Env):
         self.confounder_params = confounder_params or default_params
 
         # Initialize attributes based on confounder_params
+        self.cripple_part = self.confounder_params['cripple_part']
         self.force_type = self.confounder_params['force_type']
         self.timing = self.confounder_params['timing']
         self.body_part = self.confounder_params['body_part']
@@ -49,6 +51,9 @@ class FromDM(embodied.Env):
         self.duration_min = self.confounder_params['duration_min']
         self.duration_max = self.confounder_params['duration_max']
         self.time_since_last_force = 0
+
+        # Applying action masking for crippling of the legs
+        self.action_mask = self._action_mask(self.cripple_part)
 
     @functools.cached_property
     def obs_space(self):
@@ -84,8 +89,9 @@ class FromDM(embodied.Env):
             time_step = self._env.reset()
         else:
             action = action if self._act_dict else action[self._act_key]
-
             self.apply_force()
+            if self.action_mask is not None:
+                action = action * self.action_mask
             time_step = self._env.step(action)
         self._done = time_step.last()
         return self._obs(time_step)
@@ -144,7 +150,7 @@ class FromDM(embodied.Env):
         duration = np.random.randint(self.duration_min, self.duration_max + 1)
 
         # FLipping the direction for additional challenge
-        direction = 1 #np.random.choice([-1, 1])
+        direction = np.random.choice([-1, 1])
 
         # Apply swelling or other dynamics based on force type
         # Construct the force vector
@@ -163,3 +169,19 @@ class FromDM(embodied.Env):
         body_id = self._env.physics.model.name2id(self.body_part, 'body')
         # Apply the force
         self._env.physics.data.xfrc_applied[body_id] = force
+
+    def _action_mask(self, name):
+        mask_vec = None
+        if name == 'right_hip':
+            mask_vec = [0, 1, 1, 1, 1, 1]
+        elif name == 'right_knee':
+            mask_vec = [1, 0, 1, 1, 1, 1]
+        elif name == 'right_ankle':
+            mask_vec = [1, 1, 0, 1, 1, 1]
+        elif name == 'left_hip':
+            mask_vec = [1, 1, 1, 0, 1, 1]
+        elif name == 'left_knee':
+            mask_vec = [1, 1, 1, 1, 0, 1]
+        elif name == 'left_ankle':
+            mask_vec = [1, 1, 1, 1, 1, 0]
+        return mask_vec

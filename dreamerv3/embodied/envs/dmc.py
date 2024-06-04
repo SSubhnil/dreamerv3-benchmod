@@ -30,9 +30,9 @@ class DMC(embodied.Env):
                 env = getattr(basic_rodent_2020, task)()
             else:
                 from dm_control import suite
-                # Replace the original loading with this custom loader
-                env = makes_confounder_observable(suite, domain, task)
-                # env = suite.load(domain, task)
+                env = suite.load(domain, task)
+                # Wrapper for making external forces visible.
+                # env = ObsForceWrapper(env)
         self._dmenv = env
         from . import from_dm
         self._env = from_dm.FromDM(self._dmenv)
@@ -65,19 +65,30 @@ class DMC(embodied.Env):
     def render(self):
         return self._dmenv.physics.render(*self._size, camera_id=self._camera)
 
+class ObsForceWrapper:
+    def __init__(self, env):
+        self.env = env
 
-def makes_confounder_observable(suite, domain, task):
-    env = suite.load(domain, task)
+    def step(self, action):
+        time_step = self.env.step(action)
+        modified_observation = self._modify_observation(time_step.observation)
+        time_step.observation = modified_observation
+        return time_step
 
-    class ObservedConfounderEnv(env.__class__):
-        def observation(self,physics):
-            # Get the default observations
-            obs = super(ObservedConfounderEnv, self).observation(physics)
-            # Append external forces on the torso
-            body_id = physics.model.name2id('torso', 'body')
-            torso_force = physics.data.xfrc_applied[body_id][:3]  # Just the force components
-            obs['torso_force'] = torso_force
-            return obs
+    def reset(self):
+        time_step = self.env.reset()
+        modified_observation = self._modify_observation(time_step.observation)
+        time_step.observation = modified_observation
+        return time_step
 
-    env.__class__ = ObservedConfounderEnv
-    return env
+    def _modify_observation(self, observation):
+        # Assuming the physics object can be accessed here.
+        physics = self.env.physics
+        torso_id = physics.model.name2id('torso', 'body')
+        torso_force = physics.data.xfrc_applied[torso_id][:3]
+        observation['torso_force'] = torso_force
+        return observation
+
+    def __getattr__(self, name):
+        """Delegate calls to the environment if not part of the wrapper"""
+        return getattr(self.env, name)
