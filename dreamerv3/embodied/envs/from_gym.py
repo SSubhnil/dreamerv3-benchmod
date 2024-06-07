@@ -3,13 +3,33 @@ import functools
 from dreamerv3 import embodied
 import gymnasium as gym
 import numpy as np
+import highway_env # 'highway-v0'
 
+highway_config = {
+    "observation": {
+        "type": "Kinematics",
+        "vehicles_count": 5,
+        "features": ["presence", "x", "y", "vx", "vy"],
+        "absolute": True,
+        "order": "sorted"
+    },
+    "action": {
+        "type": "DiscreteMetaAction"
+    },
+    "lanes_count": 4,
+    "vehicles_count": 20,
+    "duration": 40,
+    "collision_reward": -1,
+    "lane_centering_cost": 0.1
+}
 
 class FromGym(embodied.Env):
 
     def __init__(self, env, obs_key='image', act_key='action', **kwargs):
         if isinstance(env, str):
             self._env = gym.make(env, **kwargs)
+            if env == 'highway-v0':
+                self._env.configure(highway_config)
         else:
             assert not kwargs, kwargs
             self._env = env
@@ -116,3 +136,5 @@ class FromGym(embodied.Env):
         if hasattr(space, 'n'):
             return embodied.Space(np.int32, (), 0, space.n)
         return embodied.Space(space.dtype, space.shape, space.low, space.high)
+
+
